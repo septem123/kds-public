@@ -8,6 +8,7 @@ import { Killmail, ParticipantStats, ShipTypeStats, CorporationStats, LossPartic
 // 常量定义
 const CAPSULE_SHIP_ID = 670;      // 太空舱 shipTypeID
 const CAPSULE_SHIP_NAME = '太空舱'; // 太空舱名称
+const MOBILE_TRACTOR_UNIT_ID = 33475; // 移动牵引装置 shipTypeID
 
 export class KillmailStats {
   private stats: CorporationStats;
@@ -45,8 +46,9 @@ export class KillmailStats {
     * 处理击杀数据并更新统计
     */
    processKillmail(killmail: Killmail): void {
-    // 过滤掉 victim 是太空舱
-    if (killmail.victim?.shipTypeID === CAPSULE_SHIP_ID) {
+    // 过滤掉 victim 是太空舱或移动牵引装置
+    if (killmail.victim?.shipTypeID === CAPSULE_SHIP_ID || 
+        killmail.victim?.shipTypeID === MOBILE_TRACTOR_UNIT_ID) {
       return;
     }
 
@@ -96,18 +98,17 @@ export class KillmailStats {
         participant.characterName = characterName;
       }
 
-      // 统计船只类型（过滤掉太空舱）
+      // 统计船只类型（过滤掉太空舱和移动牵引装置）
       const shipTypeID = attacker.shipTypeID;
       if (shipTypeID) {
         const shipName = attacker.shipTypeName || `Ship ${shipTypeID}`;
         
-        // 过滤掉太空舱
+        // 过滤掉太空舱和移动牵引装置
         if (shipName === CAPSULE_SHIP_NAME) {
-          // 太空舱不统计击杀，跳过
           continue;
         }
 
-        // 非太空舱：增加击杀计数
+        // 非过滤船只：增加击杀计数
         participant.totalKills++;
         
         // 统计船只类型
@@ -272,8 +273,9 @@ export class LossStatistics {
     const characterID = victim.characterID;
     if (!characterID) return;
 
-    // 过滤掉 victim 是太空舱的损失
-    if (victim.shipTypeID === CAPSULE_SHIP_ID) {
+    // 过滤掉 victim 是太空舱或移动牵引装置
+    if (victim.shipTypeID === CAPSULE_SHIP_ID || 
+        victim.shipTypeID === MOBILE_TRACTOR_UNIT_ID) {
       return;
     }
 
@@ -309,17 +311,17 @@ export class LossStatistics {
       participant.characterName = characterName;
     }
 
-    // 统计船只类型损失（过滤掉太空舱）
+    // 统计船只类型损失（过滤掉太空舱和移动牵引装置）
     const shipTypeID = victim.shipTypeID;
     if (shipTypeID) {
       const shipName = victim.shipTypeName || `Ship ${shipTypeID}`;
       
-      // 过滤掉太空舱（已经在前面检查过了，但保留作为安全检查）
+      // 过滤掉太空舱和移动牵引装置
       if (shipName === CAPSULE_SHIP_NAME) {
         return;
       }
 
-      // 只有非太空舱才增加损失计数
+      // 非过滤船只：增加损失计数
       participant.totalLosses++;
       const previousCount = participant.shipTypes[shipName] || 0;
       participant.shipTypes[shipName] = previousCount + 1;
