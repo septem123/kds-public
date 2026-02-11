@@ -655,4 +655,7 @@ export const SHIP_NAMES: Record<number, string> = {
 
   // 航空战列舰 (Group ID: 4902)
   89607: '奥德修斯级',
+
+  //其他
+  33475: '移动牵引装置',
 };
