@@ -96,9 +96,6 @@ export class KillmailStats {
         participant.characterName = characterName;
       }
 
-      // 更新击杀计数
-      participant.totalKills++;
-
       // 统计船只类型（过滤掉太空舱）
       const shipTypeID = attacker.shipTypeID;
       if (shipTypeID) {
@@ -106,12 +103,14 @@ export class KillmailStats {
         
         // 过滤掉太空舱
         if (shipName === CAPSULE_SHIP_NAME) {
-          // 跳过太空舱，但仍然记录 Final Blow
-          if (attacker.finalBlow) {
-            participant.finalBlows++;
-          }
-          return;  // 跳过此攻击者，不统计击杀和船只
+          // 太空舱不统计击杀，跳过
+          continue;
         }
+
+        // 非太空舱：增加击杀计数
+        participant.totalKills++;
+        
+        // 统计船只类型
         const previousCount = participant.shipTypes[shipName] || 0;
         participant.shipTypes[shipName] = previousCount + 1;
         
@@ -137,7 +136,7 @@ export class KillmailStats {
         shipStats.participants[characterID] = (shipStats.participants[characterID] || 0) + 1;
       }
 
-      // 统计 Final Blow
+      // 统计 Final Blow（非太空舱在船只统计之后）
       if (attacker.finalBlow) {
         participant.finalBlows++;
       }
@@ -269,10 +268,17 @@ export class LossStatistics {
       return;
     }
 
-    this.stats.totalLosses++;
-
+    // 获取角色 ID
     const characterID = victim.characterID;
     if (!characterID) return;
+
+    // 过滤掉 victim 是太空舱的损失
+    if (victim.shipTypeID === CAPSULE_SHIP_ID) {
+      return;
+    }
+
+    // 只有在过滤之后才增加计数
+    this.stats.totalLosses++;
 
     // 获取角色名称
     let characterName = this.getCharacterName(characterID);
@@ -303,18 +309,18 @@ export class LossStatistics {
       participant.characterName = characterName;
     }
 
-    // 更新损失计数
-    participant.totalLosses++;
-
     // 统计船只类型损失（过滤掉太空舱）
     const shipTypeID = victim.shipTypeID;
     if (shipTypeID) {
       const shipName = victim.shipTypeName || `Ship ${shipTypeID}`;
       
-      // 过滤掉太空舱
+      // 过滤掉太空舱（已经在前面检查过了，但保留作为安全检查）
       if (shipName === CAPSULE_SHIP_NAME) {
-        return;  // 跳过，不统计船只和价值
+        return;
       }
+
+      // 只有非太空舱才增加损失计数
+      participant.totalLosses++;
       const previousCount = participant.shipTypes[shipName] || 0;
       participant.shipTypes[shipName] = previousCount + 1;
 
