@@ -82,7 +82,8 @@ export interface ShipTypeStats {
 export interface CorporationStats {
   corporationID: number;
   corporationName: string;
-  totalKills: number;
+  totalKills: number;          // 过滤后的击杀数（排除太空舱、移动牵引、我方损失+敌方finalBlow）
+  rawTotalKills: number;       // 原始击杀数（仅排除 victim 是我方+finalBlow 非我方）
   participants: Map<number, ParticipantStats>;
   shipTypes: Map<number, ShipTypeStats>;
   lastUpdated: Date;

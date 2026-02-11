@@ -180,7 +180,8 @@ async function outputMarkdown(stats: KillmailStats, options: any, corporationId:
   const lines: string[] = [];
   lines.push(`# ${corporationId} 击杀统计 (${timeStr})`, '');
   lines.push(`**统计时间**: ${new Date().toLocaleString('zh-CN')}`, '');
-  lines.push(`**总击杀**: ${summary.totalKills}`, '');
+  lines.push(`**总击杀（去蛋/牵引）**: ${summary.totalKills}`, '');
+  lines.push(`**总击杀（原始）**: ${summary.rawTotalKills}`, '');
   lines.push(`**参与人数**: ${summary.totalParticipants}`, '');
   lines.push('', '## 参与者击杀排名', '');
 

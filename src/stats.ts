@@ -18,7 +18,8 @@ export class KillmailStats {
     this.stats = {
       corporationID,
       corporationName: corporationName || `Corp ${corporationID}`,
-      totalKills: 0,
+      totalKills: 0,          // 过滤后的击杀数
+      rawTotalKills: 0,        // 原始击杀数
       participants: new Map(),
       shipTypes: new Map(),
       lastUpdated: new Date(),
@@ -42,16 +43,32 @@ export class KillmailStats {
     return this.characterNames.get(characterID);
   }
 
-   /**
-    * 处理击杀数据并更新统计
-    */
-   processKillmail(killmail: Killmail): void {
+  /**
+   * 处理击杀数据并更新统计
+   * 排除规则: victim 是我方且 finalBlow 不是我方（敌方或 NPC）
+   * 过滤规则: 排除太空舱和移动牵引装置
+   */
+  processKillmail(killmail: Killmail): void {
+    // 排除: victim 是我方且 finalBlow 不是我方（敌方或 NPC）
+    if (killmail.victim && killmail.victim.corporationID === this.stats.corporationID) {
+      const finalBlowAttacker = killmail.attackers?.find(a => a.finalBlow === true);
+      const finalBlowIsUs = finalBlowAttacker && finalBlowAttacker.corporationID === this.stats.corporationID;
+      if (!finalBlowIsUs) {
+        // victim 是我方但 finalBlow 是敌方或 NPC，跳过
+        return;
+      }
+    }
+
+    // 原始击杀数（仅排除上述情况）
+    this.stats.rawTotalKills++;
+
     // 过滤掉 victim 是太空舱或移动牵引装置
-    if (killmail.victim?.shipTypeID === CAPSULE_SHIP_ID || 
+    if (killmail.victim?.shipTypeID === CAPSULE_SHIP_ID ||
         killmail.victim?.shipTypeID === MOBILE_TRACTOR_UNIT_ID) {
       return;
     }
 
+    // 过滤后的击杀数
     this.stats.totalKills++;
 
     // 检查 attackers 是否存在且可迭代
@@ -202,18 +219,19 @@ export class KillmailStats {
   }
 
   /**
-    * 获取统计摘要
-    */
-  getSummary() {
-    return {
-      corporationID: this.stats.corporationID,
-      corporationName: this.stats.corporationName,
-      totalKills: this.stats.totalKills,
-      totalParticipants: this.stats.participants.size,
-      totalShipTypes: this.stats.shipTypes.size,
-      lastUpdated: this.stats.lastUpdated,
-    };
-  }
+     * 获取统计摘要
+     */
+   getSummary() {
+     return {
+       corporationID: this.stats.corporationID,
+       corporationName: this.stats.corporationName,
+       totalKills: this.stats.totalKills,
+       rawTotalKills: this.stats.rawTotalKills,
+       totalParticipants: this.stats.participants.size,
+       totalShipTypes: this.stats.shipTypes.size,
+       lastUpdated: this.stats.lastUpdated,
+     };
+   }
 
   /**
    * 导出为 JSON
