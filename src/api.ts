@@ -7,7 +7,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import axiosRetry from 'axios-retry';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { Killmail, APIConfig, ZKillboardListItem, ESIKillmailResponse, GetKillsOptions, KillFilters } from './types';
+import { Killmail, APIConfig, ZKillboardListItem, ESIKillmailResponse, GetKillsOptions, KillFilters, LossFilters } from './types';
 import { SHIP_NAMES } from './ship-names';
 
 const ZKILLBOARD_BASE_URL = 'https://zkillboard.com/api';
@@ -169,6 +169,84 @@ export class ZKillboardAPI {
   }
 
   /**
+    * 获取 corporation 的损失记录
+    * API 端点格式: /api/losses/corporationID/{id}/[filters]/year/{Y}/month/{M}/page/{n}/
+    * 使用缓存 + 限流处理
+    */
+  async getLosses(options: GetKillsOptions): Promise<{ losses: Killmail[]; rawCount: number }> {
+    const { page = 1, solo = false, wspace = false, year, month } = options;
+
+    // 确保缓存目录存在
+    await ensureCacheDir();
+
+    // 构建缓存文件名: {corpId}-{year}-{month}[-solo][-wspace]-losses.json
+    let cacheKey = `${this.config.corporationID}-${year}-${month.toString().padStart(2, '0')}`;
+    if (solo) cacheKey += '-solo';
+    if (wspace) cacheKey += '-wspace';
+    cacheKey += '-losses';
+
+    // 构建 URL (使用 losses 而不是 kills)
+    let url = `/losses/corporationID/${this.config.corporationID}/`;
+    if (solo) url = `/solo${url}`;
+    if (wspace) url = `/w-space${url}`;
+    url += `year/${year}/month/${month}/`;
+    url += `page/${page}/`;
+
+    console.log(`Fetching losses: ${ZKILLBOARD_BASE_URL}${url}`);
+
+    // 获取简化格式数据 (killmail_id + hash)
+    const response = await this.client.get<ZKillboardListItem[]>(url);
+    const data = response.data;
+
+    if (!Array.isArray(data)) {
+      return { losses: [], rawCount: 0 };
+    }
+
+    // 读取缓存
+    const cacheFile = path.join(CACHE_DIR, 'killmails', `${cacheKey}.json`);
+    const cached = await readCache<Record<number, Killmail>>(cacheFile);
+    const cachedLosses = cached || {};
+
+    // 获取需要从 API 获取的 killmail ID
+    const needFetch: { id: number; hash: string }[] = [];
+    for (const item of data) {
+      if (!cachedLosses[item.killmail_id]) {
+        needFetch.push({ id: item.killmail_id, hash: item.zkb.hash });
+      }
+    }
+
+    // 打印进度
+    console.log(`  [进度] ${data.length} 条, 缓存命中 ${data.length - needFetch.length}, 需获取 ${needFetch.length}`);
+
+    // 获取缺失的 killmail 详情（带进度）
+    let fetched = 0;
+    const totalNeed = needFetch.length;
+    for (const item of needFetch) {
+      const killmail = await this.getESIKillmailDetail(item.id, item.hash);
+      if (killmail) {
+        cachedLosses[item.id] = killmail;
+      }
+      fetched++;
+      if (fetched % 10 === 0 || fetched === totalNeed) {
+        console.log(`  [进度] 获取损失 Killmail 详情: ${fetched}/${totalNeed} (${Math.round(fetched / totalNeed * 100)}%)`);
+      }
+      // 请求间隔 100-200ms，避免触发限流
+      await this.delay(100 + Math.random() * 100);
+    }
+
+    // 保存缓存
+    await saveCache(cacheFile, cachedLosses);
+    console.log(`  [缓存] 已保存 ${Object.keys(cachedLosses).length} 条损失记录到 ${path.basename(cacheFile)}`);
+
+    // 返回有效数据
+    const validLosses = data
+      .map(item => cachedLosses[item.killmail_id])
+      .filter((k): k is Killmail => k !== undefined);
+
+    return { losses: validLosses, rawCount: data.length };
+  }
+
+  /**
     * 使用 ESI API 获取单个击杀的完整详情
     * ESI 是 EVE 官方的 Swagger API
     */
@@ -268,6 +346,44 @@ export class ZKillboardAPI {
 
     console.log(`总计获取 ${allKills.length} 条有效击杀记录 (共 ${page - 1} 页)`);
     return allKills;
+  }
+
+  /**
+    * 获取所有损失记录（带分页和延迟）
+    * API 端点: /api/losses/corporationID/{id}/[filters]/year/{Y}/month/{M}/page/{n}/
+    * zKillboard API 每页最多返回 1000 条，翻页直到无数据为止
+    */
+  async getAllLosses(filters: LossFilters): Promise<Killmail[]> {
+    const allLosses: Killmail[] = [];
+    let page = 1;
+    let hasMore = true;
+    let totalRetrieved = 0;
+    let totalRaw = 0;
+
+    console.log(`开始获取 Corporation ${this.config.corporationID} 的损失数据... [year=${filters.year}, month=${filters.month}]`);
+
+    while (hasMore) {
+      const result = await this.getLosses({ page, ...filters });
+
+      if (result.rawCount === 0) {
+        // zKillboard API 返回空，说明已到最后一页
+        console.log(`  Page ${page}: 无数据，停止翻页`);
+        hasMore = false;
+        break;
+      }
+
+      allLosses.push(...result.losses);
+      totalRetrieved += result.losses.length;
+      totalRaw += result.rawCount;
+      console.log(`  Page ${page}: 获取 ${result.losses.length}/${result.rawCount} 条 (累计有效: ${totalRetrieved}, 原始: ${totalRaw})`);
+
+      page++;
+      // 获取下一页前等待更长时间，避免触发限流
+      await this.delay(PAGE_DELAY_MS);
+    }
+
+    console.log(`总计获取 ${allLosses.length} 条有效损失记录 (共 ${page - 1} 页)`);
+    return allLosses;
   }
 
   /**

@@ -1,29 +1,32 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-02-04
-**Project:** zKillboard Killmail Statistics Tool (EVE Online)
+**Generated:** 2026-02-11 21:49 (UTC+8)
+**Commit:** 6187d96 feat: migrate zKillboard killmail statistics tool
+**Branch:** main
 
 ## OVERVIEW
 
 TypeScript CLI tool for fetching and analyzing EVE Online corporation killmail statistics from zKillboard API and ESI API.
 
-## BUILD & TEST
+## CODE MAP
 
-```bash
-# Build
-npm run build          # Compile TypeScript to dist/
+| Symbol | Type | Location | Refs | Role |
+|--------|------|----------|------|------|
+| `ZKillboardAPI` | class | src/api.ts | index.ts, stats.ts | Core API client |
+| `ESIApi` | class | src/esi.ts | index.ts, api.ts | Character/ship name lookup |
+| `KillmailStats` | class | src/stats.ts | index.ts | Statistics calculation |
+| `CLI` | object | src/index.ts | - | Commander entry point |
 
-# Run
-npm run stats         # Run killmail stats
-npm run dev           # Run with ts-node (development)
+## WHERE TO LOOK
 
-# Data management
-npm run fetch-ships           # Fetch ship data from ESI API
-npm run gen-ship-mapping      # Generate Chinese ship name mapping
-
-# Parameters
-npm run stats -- --corp 98626718 --pages 5 --names --year 2026 --month 01
-```
+| Task | Location | Notes |
+|------|----------|-------|
+| API integration | src/api.ts | ZKillboard endpoints, rate limiting |
+| Character names | src/esi.ts | ESI batch lookup, language=zh |
+| Statistics | src/stats.ts | Kill counting, ship type aggregation |
+| CLI options | src/index.ts | Commander configuration |
+| Types | src/types.ts | Killmail, Participant, ShipType interfaces |
+| Ship data | src/data/ships-zh.json | 558 Chinese ship names (auto-generated) |
 
 ## CODE STYLE
 
@@ -193,6 +196,22 @@ scripts/
 ```bash
 npm run stats -- --corp CORPORATION_ID --names
 ```
+
+## ANTI-PATTERNS (THIS PROJECT)
+
+1. **Missing devDependency**: `ts-node` is used in scripts (`dev`, `stats`, `fetch-ships`, `gen-ship-mapping`) but NOT listed in `devDependencies` - will fail without global installation.
+
+2. **CLI/Package naming mismatch**: `package.json` name is `zkb-killmail-stats` but `src/index.ts` uses `program.name('zkb-stats')` - branding inconsistency.
+
+3. **Data location**: `ships-zh.json` lives in `src/data/` instead of root `data/` - couples data with source, unconventional but acceptable for this project.
+
+4. **No tests**: No test directory, test files, or testing framework found - this is a gap, not a pattern to follow.
+
+## UNIQUE STYLES
+
+- Chinese comments and documentation throughout (README.md, inline comments)
+- Chinese ship name mapping (`ships-zh.json`) for localized output
+- Dual README: `README.md` (EN) and Chinese README inline in docs
 
 ## GOTCHAS
 

@@ -88,6 +88,57 @@ export interface CorporationStats {
   lastUpdated: Date;
 }
 
+// ==================== 损失统计类型 ====================
+
+/**
+ * 损失统计参与者数据
+ * 基于 Killmail.victim 统计
+ */
+export interface LossParticipantStats {
+  characterID: number;
+  characterName: string;
+  corporationID: number;
+  corporationName: string;
+  totalLosses: number;
+  shipTypes: Record<string, number>;  // 船型 -> 损失数
+  totalValue: number;                // 总损失价值 (ISK)
+  damageTaken: number;               // 总承受伤害
+}
+
+/**
+ * 损失统计船只类型数据
+ * 统计各类船型的损失情况
+ */
+export interface LossShipTypeStats {
+  shipTypeID: number;
+  shipTypeName: string;
+  totalLosses: number;
+  totalValue: number;                // 该船型总损失价值
+  participants: Record<string, number>; // characterID -> 损失次数
+}
+
+/**
+ * 损失统计数据聚合
+ */
+export interface LossStatisticsData {
+  corporationID: number;
+  corporationName: string;
+  totalLosses: number;
+  participants: Map<number, LossParticipantStats>;
+  shipTypes: Map<number, LossShipTypeStats>;
+  lastUpdated: Date;
+}
+
+/**
+ * 损失记录过滤器
+ */
+export interface LossFilters {
+  solo?: boolean;
+  wspace?: boolean;
+  year: number;
+  month: number;
+}
+
 export interface APIConfig {
   corporationID: number;
   maxPages?: number;
@@ -100,13 +151,14 @@ export interface CLIOptions {
   pages?: number;
   delay?: number;
   output?: 'table' | 'json' | 'csv';
-  sortBy?: 'kills' | 'damage' | 'finalblows';
+  sortBy?: 'kills' | 'damage' | 'finalblows' | 'losses' | 'value';
   topN?: number;
   solo?: boolean;
   wspace?: boolean;
   year?: number;
   month?: number;
   names?: boolean;
+  losses?: boolean;
 }
 
 // ==================== API 响应类型 ====================

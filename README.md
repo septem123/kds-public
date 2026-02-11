@@ -1,14 +1,15 @@
 # zKillboard 击杀统计工具
 
-EVE Online Corporation Killmail Statistics Tool - 获取并分析军团的击杀数据。
+EVE Online Corporation Killmail Statistics Tool - 获取并分析军团的击杀和损失数据。
 
 ## 功能特性
 
-- **击杀统计**: 统计军团成员的击杀数量、Final Blow、伤害输出
+- **击杀统计**: 统计军团成员的击杀数量、Final Blow
+- **损失统计**: 统计军团成员的损失数量和总价值
 - **船只排行**: 统计各类船型的使用次数和参与人数
-- **角色名称**: 自动从 ESI API 获取角色名称（中文可读）
-- **日期过滤**: 支持按年份、月份、天数筛选数据
-- **多种输出格式**: 支持表格、JSON、CSV 三种输出格式
+- **角色名称**: 自动从 ESI API 获取角色名称（中文可读，默认启用）
+- **日期过滤**: 支持按年份、月份筛选数据
+- **多种输出格式**: Markdown 文件输出到 docs/ 目录
 
 ## 安装
 
@@ -19,29 +20,30 @@ npm install
 ## 快速开始
 
 ```bash
-# 基本用法 - 获取最新击杀统计
+# 击杀统计（默认，自动获取角色名称，输出到 docs/）
 npm run stats -- --corp 98626718
 
-# 获取角色名称
-npm run stats -- --corp 98626718 --names
+# 损失统计
+npm run stats -- --corp 98626718 --losses
 
 # 按时间筛选
 npm run stats -- --corp 98626718 --year 2026 --month 01
-npm run stats -- --corp 98626718 --days 30
 
-# 自定义排序和数量
-npm run stats -- --corp 98626718 --sort kills --top 20
-npm run stats -- --corp 98626718 --sort damage --top 50
-npm run stats -- --corp 98626718 --sort finalblows
-
-# 输出格式
-npm run stats -- --corp 98626718 --output json
-npm run stats -- --corp 98626718 --output csv
+# 自定义排序
+npm run stats -- --corp 98626718 --sort kills --top 20      # 按击杀数
+npm run stats -- --corp 98626718 --sort finalblows         # 按 Final Blow
+npm run stats -- --corp 98626718 --sort value              # 按价值（损失统计）
 
 # 筛选特定类型
 npm run stats -- --corp 98626718 --solo      # 仅 Solo 击杀
 npm run stats -- --corp 98626718 --wspace    # 仅 W-Space 击杀
 ```
+
+## 输出文件
+
+统计结果输出到 `docs/` 目录：
+- `docs/{corp}-{time}.md` - 击杀统计
+- `docs/{corp}-{time}-losses.md` - 损失统计（使用 --losses 参数）
 
 ## 完整参数
 
@@ -50,15 +52,14 @@ npm run stats -- --corp 98626718 --wspace    # 仅 W-Space 击杀
 | `-c, --corp <id>` | Corporation ID | 98626718 |
 | `-p, --pages <n>` | 获取页数 | 10 |
 | `-d, --delay <ms>` | 请求间隔(毫秒) | 1000 |
-| `-o, --output <type>` | 输出格式 | table |
 | `-s, --sort <field>` | 排序字段 | kills |
-| `-t, --top <n>` | 显示前N名 | 20 |
+| `-t, --top <n>` | 显示前N名 | 100 |
 | `--year <yyyy>` | 按年份筛选 | - |
 | `--month <mm>` | 按月份筛选 | - |
-| `--days <n>` | 按天数筛选(过去N天) | - |
-| `--names` | 获取角色名称 | false |
+| `--names` | 获取角色名称 | true (默认启用) |
 | `--solo` | 仅 Solo 击杀 | false |
 | `--wspace` | 仅 W-Space 击杀 | false |
+| `--losses` | 损失统计模式 | false |
 
 ## 输出示例
 
@@ -97,14 +98,16 @@ zkb-killmail/
 ├── src/
 │   ├── api.ts          # zKillboard API 客户端
 │   ├── esi.ts          # ESI API 客户端
-│   ├── index.ts        # 主入口
-│   ├── stats.ts        # 统计模块
+│   ├── index.ts        # 主入口 (Commander)
+│   ├── stats.ts        # 统计模块 (击杀 + 损失)
 │   ├── types.ts        # 类型定义
 │   └── data/
 │       └── ships-zh.json   # 中文船型数据库 (558个)
 ├── scripts/
 │   ├── fetch-ship-names.ts      # 获取船型数据
 │   └── generate-ship-mapping.ts # 生成中文船型映射
+├── docs/                 # 统计输出目录
+├── cache/               # API 缓存目录
 ├── package.json
 └── tsconfig.json
 ```
@@ -154,8 +157,9 @@ USER_AGENT="your-name your@email.com"
 
 1. **API 限制**: zKillboard API 每次最多返回 1000 条记录
 2. **请求频率**: 请合理控制请求间隔，避免被限制
-3. **角色名称**: 获取角色名称会增加额外的 API 调用
+3. **角色名称**: 默认自动获取（会增加额外的 API 调用）
 4. **数据量**: 全量数据可能需要较长时间获取
+5. **数据过滤**: 击杀统计自动过滤 victim 是太空舱（shipTypeID: 670）的记录
 
 ## 许可证
 
