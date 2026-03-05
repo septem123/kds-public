@@ -50,23 +50,31 @@ jobs:
 
       - name: Update README
         run: |
-          MONTH=${{ steps.date.outputs.month }}
-          YEAR=${{ steps.date.outputs.year }}
-          CORP_ID=98626718
+          cat > /tmp/update_readme.js << 'EOF'
+          const fs = require('fs');
+          const month = process.env.MONTH;
+          const year = process.env.YEAR;
+          const corpId = '98626718';
 
-          # Read kill stats
-          KILLS_FILTERED=$(grep "总击杀（去蛋/牵引）" docs/${CORP_ID}-${YEAR}-${MONTH}.md | grep -oP '\d+' | head -1)
-          KILLS_RAW=$(grep "总击杀（原始）" docs/${CORP_ID}-${YEAR}-${MONTH}.md | grep -oP '\d+' | head -1)
-          LOSSES=$(grep "总损失" docs/${CORP_ID}-${YEAR}-${MONTH}-losses.md | grep -oP '\d+' | head -1)
+          const killContent = fs.readFileSync('docs/' + corpId + '-' + year + '-' + month + '.md', 'utf8');
+          const lossesContent = fs.readFileSync('docs/' + corpId + '-' + year + '-' + month + '-losses.md', 'utf8');
 
-          # Create new section
-          NEW_SECTION="## ${YEAR}-${MONTH}"$'\n\n'
-          NEW_SECTION+="**击杀（去蛋/牵引）**: ${KILLS_FILTERED} | **击杀（原始）**: ${KILLS_RAW} | **损失**: ${LOSSES}"$'\n\n'
-          NEW_SECTION+="[击杀统计](docs/${CORP_ID}-${YEAR}-${MONTH}.md)  [损失统计](docs/${CORP_ID}-${YEAR}-${MONTH}-losses.md)"$'\n\n'
-          NEW_SECTION+="---"$'\n\n'
+          const killsFiltered = killContent.match(/总击杀（去蛋\/牵引）[^\\d]*(\\d+)/)?.[1] || '0';
+          const killsRaw = killContent.match(/总击杀（原始）[^\\d]*(\\d+)/)?.[1] || '0';
+          const losses = lossesContent.match(/总损失[^\\d]*(\\d+)/)?.[1] || '0';
 
-          # Insert after first line
-          sed -i "1i\\${NEW_SECTION}" README.md
+          const newSection = '## ' + year + '-' + month + '\n\n' +
+            '**击杀（去蛋/牵引）**: ' + killsFiltered + ' | **击杀（原始）**: ' + killsRaw + ' | **损失**: ' + losses + '\n\n' +
+            '[击杀统计](docs/' + corpId + '-' + year + '-' + month + '.md)  [损失统计](docs/' + corpId + '-' + year + '-' + month + '-losses.md)\n\n' +
+            '---\n\n';
+
+          const readme = fs.readFileSync('README.md', 'utf8');
+          fs.writeFileSync('README.md', newSection + readme);
+          EOF
+          node /tmp/update_readme.js
+        env:
+          MONTH: ${{ steps.date.outputs.month }}
+          YEAR: ${{ steps.date.outputs.year }}
 
       - name: Commit and push
         run: |
