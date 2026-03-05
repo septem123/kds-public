@@ -54,7 +54,7 @@ jobs:
         run: |
           cat > /tmp/update_readme.js << 'EOF'
           const fs = require('fs');
-          const month = process.env.MONTH;
+          const month = parseInt(process.env.MONTH).toString().padStart(2, '0');
           const year = process.env.YEAR;
           const corpId = '98626718';
 
@@ -84,7 +84,20 @@ jobs:
             '---\n\n';
 
           const readme = fs.readFileSync('README.md', 'utf8');
-          fs.writeFileSync('README.md', newSection + readme);
+
+          // 在 "KDS开放数据统计" 标题后面插入
+          const title = 'KDS开放数据统计';
+          const titleIndex = readme.indexOf(title);
+
+          if (titleIndex !== -1) {
+            // 找到标题后插入新内容
+            const insertPos = titleIndex + title.length;
+            const newReadme = readme.slice(0, insertPos) + '\n\n' + newSection + readme.slice(insertPos);
+            fs.writeFileSync('README.md', newReadme);
+          } else {
+            // 如果没找到标题，直接在前面插入
+            fs.writeFileSync('README.md', newSection + readme);
+          }
           EOF
           node /tmp/update_readme.js
         env:
