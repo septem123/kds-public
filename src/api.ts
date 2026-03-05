@@ -82,7 +82,15 @@ export class ZKillboardAPI {
     // 配置重试逻辑
     axiosRetry(this.client, {
       retries: MAX_RETRY_COUNT,
-      retryDelay: (retryCount) => retryCount * 1000,
+      retryDelay: (retryCount, error) => {
+        // 429 限流等待10秒
+        if (error.response?.status === 429) {
+          console.log('触发限流，等待10秒后重试...');
+          return 10000;
+        }
+        // 其他错误指数退避
+        return retryCount * 1000;
+      },
       retryCondition: (error) => {
         return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
                (error.response?.status !== undefined && error.response.status === 429) ||
