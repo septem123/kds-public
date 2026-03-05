@@ -58,12 +58,25 @@ jobs:
           const year = process.env.YEAR;
           const corpId = '98626718';
 
-          const killContent = fs.readFileSync('docs/' + corpId + '-' + year + '-' + month + '.md', 'utf8');
-          const lossesContent = fs.readFileSync('docs/' + corpId + '-' + year + '-' + month + '-losses.md', 'utf8');
+          const killFile = 'docs/' + corpId + '-' + year + '-' + month + '.md';
+          const lossFile = 'docs/' + corpId + '-' + year + '-' + month + '-losses.md';
 
-          const killsFiltered = killContent.match(/总击杀（去蛋.*牵引）.*?(\\d+)/)?.[1] || '0';
-          const killsRaw = killContent.match(/总击杀（原始）.*?(\\d+)/)?.[1] || '0';
-          const losses = lossesContent.match(/总损失[^\\d]*(\\d+)/)?.[1] || '0';
+          console.log('Reading:', killFile, lossFile);
+          console.log('Month:', month, 'Year:', year);
+
+          const killContent = fs.readFileSync(killFile, 'utf8');
+          const lossesContent = fs.readFileSync(lossFile, 'utf8');
+
+          // 简单匹配第一行包含数字的行
+          const killsFilteredMatch = killContent.match(/总击杀（去蛋[^）]*牵引）[^0-9]*(\d+)/);
+          const killsRawMatch = killContent.match(/总击杀（原始）[^0-9]*(\d+)/);
+          const lossesMatch = lossesContent.match(/总损失[^0-9]*(\d+)/);
+
+          const killsFiltered = killsFilteredMatch ? killsFilteredMatch[1] : '0';
+          const killsRaw = killsRawMatch ? killsRawMatch[1] : '0';
+          const losses = lossesMatch ? lossesMatch[1] : '0';
+
+          console.log('killsFiltered:', killsFiltered, 'killsRaw:', killsRaw, 'losses:', losses);
 
           const newSection = '## ' + year + '-' + month + '\n\n' +
             '**击杀（去蛋/牵引）**: ' + killsFiltered + ' | **击杀（原始）**: ' + killsRaw + ' | **损失**: ' + losses + '\n\n' +
