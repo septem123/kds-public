@@ -61,8 +61,8 @@ jobs:
           const killContent = fs.readFileSync('docs/' + corpId + '-' + year + '-' + month + '.md', 'utf8');
           const lossesContent = fs.readFileSync('docs/' + corpId + '-' + year + '-' + month + '-losses.md', 'utf8');
 
-          const killsFiltered = killContent.match(/总击杀（去蛋\/牵引）[^\\d]*(\\d+)/)?.[1] || '0';
-          const killsRaw = killContent.match(/总击杀（原始）[^\\d]*(\\d+)/)?.[1] || '0';
+          const killsFiltered = killContent.match(/总击杀（去蛋.*牵引）.*?(\\d+)/)?.[1] || '0';
+          const killsRaw = killContent.match(/总击杀（原始）.*?(\\d+)/)?.[1] || '0';
           const losses = lossesContent.match(/总损失[^\\d]*(\\d+)/)?.[1] || '0';
 
           const newSection = '## ' + year + '-' + month + '\n\n' +
