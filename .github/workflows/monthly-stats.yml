@@ -60,7 +60,8 @@ jobs:
           CORP_ID=98626718
 
           # Create new section for README
-          NEW_SECTION="## ${YEAR}-${MONTH}
+          cat > /tmp/new_section.txt << 'SECTION'
+## ${YEAR}-${MONTH}
 
 **击杀（去蛋/牵引）**: ${KILLS_FILTERED} | **击杀（原始）**: ${KILLS_RAW} | **损失**: ${LOSSES}
 
@@ -68,10 +69,10 @@ jobs:
 
 ---
 
-"
+SECTION
 
           # Insert after first line (title) in README
-          sed -i "1a\\${NEW_SECTION}" README.md
+          sed -i '1r /tmp/new_section.txt' README.md
         env:
           CORP_ID: 98626718
 
