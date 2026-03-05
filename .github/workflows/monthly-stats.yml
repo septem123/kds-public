@@ -9,6 +9,7 @@ on:
 jobs:
   stats:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # 最大运行30分钟
 
     steps:
       - uses: actions/checkout@v4
@@ -24,6 +25,14 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+
+      - name: Cache killmail data
+        uses: actions/cache@v4
+        with:
+          path: cache
+          key: killmail-cache-${{ runner.os }}
+          restore-keys: |
+            killmail-cache-
 
       - name: Calculate previous month
         id: date
