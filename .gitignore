@@ -34,3 +34,4 @@ Thumbs.db
 
 # lock
 *-lock.json
+!package-lock.json
