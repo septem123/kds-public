@@ -36,3 +36,4 @@ Thumbs.db
 *-lock.json
 !package-lock.json
 CLAUDE.md
+.claude
