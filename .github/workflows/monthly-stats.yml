@@ -2,8 +2,8 @@ name: Monthly Stats
 
 on:
   schedule:
-    # 每月1号 UTC 0点运行 (北京时间早上8点)
-    - cron: '0 0 1 * *'
+    # 每月4号 UTC 0点运行 (北京时间早上8点)
+    - cron: '0 0 4 * *'
   workflow_dispatch:
 
 jobs:
